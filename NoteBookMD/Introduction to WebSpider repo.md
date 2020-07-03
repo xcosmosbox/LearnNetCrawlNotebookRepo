@@ -2,7 +2,7 @@
 
 ## 		1.第一章: 网络请求 ##
 
-### *urllib库* ###
+### *urllib库（已包含在python标准库）* ###
 
   #### 1.urlopen ####
 
@@ -359,4 +359,926 @@ print(response.content.decode('utf-8'))
 -- --
 
 ## 2.第二章：数据解析 ##
+
+| 解析工具      | 解析速度 | 使用难度 |
+| ------------- | -------- | -------- |
+| BeautifulSoup | 最慢     | 最简单   |
+| lxml          | 快       | 简单     |
+| 正则表达式    | 最快     | 最难     |
+
+
+
+### *XPath语法* ###
+
+#### 1.选取节点 ####
+
+| 表达式   | 描述                                                         | 示例           | 结果                            |
+| -------- | ------------------------------------------------------------ | -------------- | ------------------------------- |
+| nodename | 选取此节点的所有子节点                                       | bookstore      | 选取bookstore下所有的子节点     |
+| /        | 如果是在最前面，代表从根节点选取。否则选择某节点下的某个节点。 | /bookstore     | 选取根元素下所有的bookstore节点 |
+| //       | 从全局节点中选择节点，随便在那个位置                         | //book         | 从全局节点中找到所有的book节点  |
+| @        | 选取某个节点的属性                                           | //book[@price] | 选取所有拥有price属性的bok节点  |
+
+示例：
+
+1)nodename(选取此节点的所有子节点)
+
+ eg:bookstore 就会选取bookstore下所有的子节点
+
+ 2) / (如果在最前面，代表从根节点选区。否则选择某节点下的某个节点)局部
+
+ eg:/bookstore 就选取到了根元素下所有的bookstore节点
+
+ eg: 在网页上/div 是找不到的,因为这个是在根节点上找的,而在根节点html上面是没有div的
+
+ div是在其中的孙节点body中,/html是可以找到的,但是/html/div 就是找不到的
+
+ 3) // (从全局节点中选择节点,随便在哪个位置)全局
+
+ eg: //book 从全局节点中找到所有的book节点
+
+ eg: //head/script 从head中选中局部的script就是单单是head中的script
+
+ eg: //script 从全局当中选中script,不单单是局限与head中的script,也有可以能是body当中的script
+
+4) @ (选区某个节点的属性) 有点类似面向对象的类的属性
+
+```xml
+              <book price="xx">       这个price就是book的属性
+               eg: //book[@price]     选择所有拥有price属性的book节点
+
+```
+
+```xml
+              <div id="xxx">         这个id就是div的属性
+           	  eg: //div[@id]         选择所有拥有id属性的div节点
+
+```
+
+
+
+#### 2.谓语 ####
+
+谓语是用来查找某个特定的节点或包含某个指定的值的节点，被嵌在方括号中。在下面的表格中，我们列出了带有谓语的一些路径表达式，以及表达式的结果：
+
+| 路径表达式                   | 描述                              |
+| ---------------------------- | --------------------------------- |
+| /bookstore/book[1]           | 选取bookstore下的第一个子元素     |
+| /bookstore/book[last()]      | 选取bookstore下倒数第二个元素     |
+| bookstore/book[position()<3] | 选取bookstore下前面两个子元素     |
+| //book[@price]               | 选取拥有price属性的book元素       |
+| //book[@price=10]            | 选取所有属性price等于10的book元素 |
+
+示例：
+
+用来查找某个特定的节点或者包含某个指定的值的节点,被嵌在方括号中
+
+ 1)
+
+ eg:/bookstore/book[1] 选取bookstore下的第一个子元素
+
+ eg://body/div[1] 获取body当中的第一个div元素
+
+ 2)
+
+ eg:/bookstore/book[last()] 选取bookstore下的倒数第二个book元素
+
+ 3)
+
+ eg:bookstore/book[position()] 选取bookstore下前面两个子元素
+
+ eg://body/div[position()] 选取body元素的div下的前两个position元素
+
+ 4)
+
+ eg://book[@price] 选取拥有price属性的book元素
+
+ 5)
+
+ eg://book[@price=10] 选取所有属性price等于10的book元素节点
+
+ eg://div[@class=‘s_position_list’] 可以获取div下的有s_position_list的class节点
+
+ 模糊匹配contains:
+
+```xml
+ eg:<div class="content_1 f1">            只选取其中的f1属性则有
+	//div[contains(@class,"f1")]              
+	使用contains进行模糊匹配,匹配到class下的f1属性
+
+```
+
+
+
+#### 3.通配符 ####
+
+(*表示通配符)
+
+| 通配符 | 描述                 | 示例         | 结果                       |
+| ------ | -------------------- | ------------ | -------------------------- |
+| *      | 匹配任意节点         | /bookstore/* | 选取bookstore下所有子元素  |
+| @*     | 匹配节点中的任何属性 | //book[@*]   | 选取所有带有属性的book元素 |
+
+ 1) * 匹配任意节点
+
+ eg:/bookstore/* 选取bookstore下的所有子元素
+
+ 2) @* 匹配节点中的任何属性
+
+ eg://book[@*] 选取所有带有属性的book元素
+
+
+
+#### 4.选取多个路径 ####
+
+(通过 | 运算符来选取多个路径)
+
+ 1)
+
+ eg://bookstore/book | //book/title
+
+ #选取所有bookstore元素下的book元素以及book元素下的所有所有title元素
+
+ eg://dd[@class=“job_bt”] | //dd[@class=“job-advantage”]
+
+ #选取所有dd下的class的job_bt和job-advantage的所有属性，还有其他运算符 and or之类的。
+
+```xml
+//bookstore/book | //book/title
+# 选取所有book元素以及book元素下面的title元素
+```
+
+
+
+#### 5.Summary ####
+
+ 1.使用//获取整个页面当中的元素，然后写标签名，然后在写谓词进行提取。
+
+ eg: //div[@class=‘abc’]
+
+ 2./只是直接获取子节点,而//是获取子孙节点
+
+ 3.contains: 有时候某个属性中包含了多个值,那么可以使用contains函数
+
+ eg: //div[contains(@class,‘xxx’)]
+
+
+
+### *lxml库* ###
+
+#### 1.基本使用
+
+1)解析html字符串:使用lxml.etree.HTML进行解析
+
+```python
+from lxml import etree    (这是用c语言写的)
+text="这里就是代码"                                   
+#这里的代码是不规范的不完整的html
+html=etree.HTML(text)                                
+#利用etree.HTML类,将字符串变成为HTML文档再进行解析,但是这是一个对象
+result=etree.tostring(text,encoding='utf-8')         
+#按字符串序列化HTML文档,但是这个是bytes类型,为了防止乱码,加上encoding='utf-8'
+#那么就是说解析这个网页的时候要用utf-8的形式来进行编码,防止乱码,因为默认是unicode编码
+result.decode('utf-8') 
+#要解码为了使人可以看懂
+
+```
+
+
+
+2)解析html文件: 使用lxml.etree.parse继续解析
+
+```python
+#效果和上面一样，但是这个两个方法都是默认使用XML解析器，所以如果碰到一些不规范的HTML代码的时候就会解析错误，这时候就要自己创建HTML解析器了
+parser=etree.HTMLParser(encoding='utf-8')               
+#构建HTML解析器,防止网页的源代码的缺失
+html=etree.parse("tencent.html(放地址)",parser=parser)  
+#可以进行这parse就可以直接对其进行解析,但是有时候有些网页不完整
+#少一个div之类的,这时候就是会报错,解决方法就是加上parser解析器
+result=etree.tostring(text,encoding='utf-8')
+result.decode('utf-8')
+```
+
+
+
+3)创建带有HTML解析器的代码和所有相关示例的演示代码（包含了以腾讯的html为例子，讲解lxml和xpath的结合应用）:
+
+```python
+from lxml import etree
+
+parser = etree.HTMLParser(encoding="utf-8")  # 构造HTML解析器,防止网页不完整而解析不了
+html = etree.parse("tencent.html", parser=parser)
+
+
+
+# xpath函数是返回一个列表
+# 1.获取所有的tr标签   //tr
+trs = html.xpath("//tr")
+for tr in trs:
+    # print(tr)  
+    # 这样的话是直接返回一个迭代器对象,人是看不懂的,要经过解码才行.
+    print(etree.tostring(tr, encoding="utf-8").decode("utf-8"))
+    # 就是直接用etree.tostring变成字符串,然后再进行编码,再进行解码
+    # 可以用先不用decode试试再加上decode
+
+    
+    
+# 2.获取第二个tr标签
+trs = html.xpath("//tr[2]")     # 这是返回一个元素,迭代器元素
+print(trs)
+trs = html.xpath("//tr[2]")[0]  # 这就是取这里的第一个元素
+print(trs)
+print(etree.tostring(trs, encoding='utf-8').decode("utf-8"))
+# 以字符串的形式,utf-8的编码方式再解码才能让这个迭代器元素呈现出来,即是网页的源代码
+
+
+
+# 3.获取所有class等于even的tr标签
+evens = html.xpath("//tr[@class='even']")
+for even in evens:
+    print(etree.tostring(even, encoding="utf-8").decode("utf-8"))
+# 先是写tr标签,再写符合class属性等于even的所有标签
+
+
+
+# 4.获取所有a标签的href属性,这边这个是属性,返回属性,href属性其实就是网址域名后面的那一串东西
+ass = html.xpath("//a/@href")
+print("http://hr.tencent.com/" + ass)  # 就可以直接进行点击网页
+# 4.1获取所有href属性的a标签,这边这个是显示a这个容器中的所有东西,毕竟[]
+ass = html.xpath("//a[@href]")
+
+
+
+# 5.获取所有的职位信息(纯文本)
+"""<tr>
+<td class="xxx"><a target="xxx" href="xxx">我是第一个文本</a></td>
+<td>我是第二个文本</td>
+<td>我是第三个文本</td>
+</tr>"""
+words = html.xpath("//tr[position()>1]")  # 除了第一个tr标签,其他全获取
+all_things=[]
+for word in words:
+    # href=tr.xpath("a")                   
+    # 获取a标签,但是这样是默认tr下的直接a标签,但是这时候是获取不到的,
+    # 因为a不是tr的直接子标签,td才是直接子标签
+    # href=tr.xpath("//a")                 
+    # 这样是相当于忽视了前面的tr.的默认,因为加了//就是全局的a标签了
+    href = tr.xpath(".//a")                
+    # 在某个标签下,再执行xpath函数,获取这个标签的子孙元素,那么//前加了一个点就是相当于是当前这个tr.并且是仅限于该tr.标签下的a标签
+    href = tr.xpath(".//a/@href")          
+    # 得到第一个a标签的href属性,href就是页面后面的网址的那一部分
+    title = tr.xpath(".//a/text()")        
+    # 这样就可以获取到a标签下的所有文本即"我是第一个文本"
+    title = tr.xpath("./td/text()")        
+    # 这样就可以获取到td标签下的所有文本,但是这里只是获取到"我是第二个文本",所以上面的那个"我是第一个文本"这个信息是在a标签下的并不是直接属于td的
+    title1 = tr.xpath("./td[1]//text()")   
+    # 这里就是第一个td标签,注意这是和python的索引不一样的,这个是从1开始的,python的是从0开始的
+    # 因为这里面的文本并不是td的直接子元素,a才是td的直接子元素,所以我们就是要将器变成//text(),而不是/text()
+    title2 = tr.xpath("./td[2]//text()")   # 就可以拿到第二个文本,即"我是第三个文本"
+    all_thing={
+        "first": title1,                   # 将其变成列表形式
+        "second": title2
+    }
+    all_things.append(all_thing)           # 将其放给列表当中
+    print(href)
+    break
+
+# lxml结合xpath注意事项:
+# 反复练习才有用
+
+```
+
+
+
+### 小结：豆瓣和电源天堂项目实战 ###
+
+#### 豆瓣： ####
+
+```python
+import requests
+from lxml import etree
+# 1.将目标网站上的页面抓取下来
+
+headers={
+    'User-Agent': "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.16 Safari/537.36",
+    # 仿照浏览器,将该爬虫包装成一个浏览器
+    'Referer': "https://www.baidu.com/s?wd=%E8%B1%86%E7%93%A3&rsv_spt=1&rsv_iqid=0xded42b9000078acc&issp=1&f=8&rsv_bp"
+               "=1&rsv_idx=2&ie=utf-8&tn=62095104_19_oem_dg&rsv_enter=1&rsv_dl=ib&rsv_sug3=8&rsv_sug1=5&rsv_sug7=100"
+               "&rsv_sug2=0&inputT=1250&rsv_sug4=1784 "
+    # 告诉服务器该网页是从哪个页面链接过来的,服务器因此可以获得一些信息用于处理,一般用于多网页的爬取
+}
+url = 'https://movie.douban.com/'
+response = requests.get(url, headers=headers)
+text = response.text                              #将其网页爬取下来了
+#text=open("Douban.text",'r',encoding="utf-8")
+# print(response.text)
+
+# response.text: 返回的是一个经过解码后的字符串,是str(unicode)类型,有可能会发生乱码,因为解码方式可能不一样而导致乱码
+# response.content: 返回的是一个原生的字符串,就是从网页上抓取下来,没有经过处理,bytes类型
+
+# 2.将抓取的数据根据一定的规则进行提取
+html = etree.HTML(text)                      # 对网页进行解析,对text进行解码
+print(html)
+#html = html.xpath("//ul/li/a/@href")获取a标签下的href属性值             
+#html = html.xpath("//ul/li/a/text()")获取a标签下的文本
+
+ul = html.xpath("//ul")[0]
+print(ul)
+lts=ul.xpath("./li")
+for li in lts:
+    title=li.xpath("@data-title")
+    data_release=li.xpath("@data-release")
+    #data_duration=li.xpath("@data-ticket data-duration")
+    data_region=li.xpath("@data-region")
+    data_actors=li.xpath("@data-actors")
+    post=li.xpath(".//img/@scr")
+    print(data_actors)
+    print(post)
+    movie={
+        'title':title,
+        'data_release':data_release
+    }
+
+```
+
+#### 电影天堂：
+
+```python
+# 爬取电影天堂
+import requests
+from lxml import etree
+
+BASE_URL='https://www.dytt8.net/'
+url = 'https://www.dytt8.net/html/gndy/dyzz/index.html'
+HEADERS = {
+        'Referer': 'https://www.dytt8.net/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.16 Safari/537.36'
+    		}
+def get_detail_urls(url):
+    response = requests.get(url, headers=HEADERS)
+    # print(response.text)          
+    #requests库,默认会使用自己猜测的编码方式将爬取下来的网页进行解码,,然后存到text属性上面
+    # 在电影天堂的网页中，因为编码方式，requests库猜错了，所以就会乱码 	 print(response.content.decode(encoding='gbk', errors='ignore'))    
+    #F12 在console输入document.charset 查看编码方式,要加上这个errors才能让程序跑通 response.content 会是将其中的解码方式改成自己所需要的解码方式
+    text = response.content.decode(encoding='gbk', errors='ignore')
+    html = etree.HTML(text)  # 解析网页
+    detail_urls = html.xpath("//table[@class='tbspan']//a/@href")  
+    #在含有class=tbspan属性的table标签,因为一个网页有很多的class,
+    #这个class=tbspan就是所需要爬取的数据的table的特征特定
+    #然后就是这个table属性下的所有a标签中的所有href属性
+    #for detail_url in detail_urls:
+        #print(BASE_URL + detail_url)
+    detail_urls=map(lambda url:BASE_URL+url,detail_urls)
+    return detail_urls
+    #以上代码就是相当于:
+    #def abc(url):
+    #    return BASE_URL+url
+    #index=0
+    #for detail_url in detail_urls:
+    #    detail_url=abc(detail_url)
+    #    detail_urls[index]=detail_url
+    #    index+=1
+
+
+def spider():
+    movies = []
+    base_url="https://www.dytt8.net/html/gndy/dyzz/list_23_{}.html"    
+    # 留一个{}所以就是会将其中槽填上
+    for x in range(1,7):                                               
+        # for中找到其中的网页的几页
+        print("==================================")
+        print(x)
+        print("==================================")                    
+        # 如果有gbk识别不了的编码的话，就是会有出现错误,因为有一个特殊的字符是gbk识别编译不了                                                           
+        # 那么解析网页的时候text=response.content.decode('gbk',errors='ignore')
+        url=base_url.format(x)
+        detail_urls=get_detail_urls(url)
+        for detail_url in detail_urls:             
+            # 这个for循环是为了遍历一个页面中的全部电影详情的url
+            # print(detail_url)
+            movie = parse_detail_page(detail_url)
+            movies.append(movie)
+    print(movies)                     #爬完之后才会全部显示出来,时间有点慢的               
+
+
+
+def parse_detail_page(url):
+    movie={}
+    response = requests.get(url,headers=HEADERS)
+    text = response.content.decode('gbk')     #解码
+    html=etree.HTML(text)                     #返回元素
+    #titles=html.xpath("//font[@color='#07519a']")    
+    #将详情页面上面的标题爬取下来,但是单单这样的话就是会将其中的其他的一样的标准的也是会爬取下来,那么就是将其独一无二的标签限定出来
+    title=html.xpath("//div[@class='title_all']//font[@color='#07519a']/text()")[0]       # 这样规定的div就可以爬取下特定的标题,加上text就会将对象编码的东西里面的文字打印出来
+    #print(titles)         
+    #这样是把获取到的对象列表给打印出来
+    #for title in titles:
+        #print(etree.tostring(title,encoding='utf-8').decode('utf-8'))  
+        #以字符串的形式输出,不然就会以字节流的形式
+    movie['titile']=title
+    zoomE=html.xpath("//div[@id='Zoom']")[0]   
+    #zoom中含有很多所需要爬取的信息,而xpath中是返回一个列表所以就是要将其取第一个元素
+    post_imgs=zoomE.xpath(".//img/@src")
+    movie['post_imgs']=post_imgs
+    #print(post_imgs)
+    infos=zoomE.xpath(".//text()")     
+    #将zoom下的所有信息拿到
+    #print(infos)
+
+    def parse_info(info,rule):
+        return info.replace(rule,"").strip()  
+    #定义一个函数,传入原来的字符串，输出后来修改后的字符串
+
+
+    #for info in infos:
+    for index,info in enumerate(infos):   
+        # 这样将对应的下表和元素给打印出来
+        if info.startswith("◎年　　代"):
+            # print(info)
+            #info = info.replace("◎年　　代", "").strip()  
+            # 这个代码和下面那一行函数执行额代码是一样的 
+            # 将年代替换了之后，再将其中年代左右空格给替换掉
+            info=parse_info(info,"◎年　　代")
+            movie["year"]=info
+        elif info.startswith("◎产　　地"):
+            #info=info.replace("◎产　　地","").strip()
+            info = parse_info(info, "◎产　　地")
+            movie["country"]=info
+        elif info.startswith("◎类　　别"):
+            #info = info.replace("◎类　　别", "").strip()
+            info = parse_info(info, "◎类　　别")
+            movie["category"]=info
+        elif info.startswith("◎豆瓣评分"):
+            info=parse_info(info,"◎豆瓣评分")
+            movie["douban_score"]=info
+        elif info.startswith("◎片　　长"):
+            info=parse_info(info,"◎片　　长")
+            movie["duration"]=info
+        elif info.startswith("◎导　　演"):
+            info=parse_info(info,"◎导　　演")
+            movie["director"]=info
+        elif info.startswith("◎主　　演"):
+            info=parse_info(info,"◎主　　演")      
+            #因为这个源代码是一行一个列表下标,所以就是比较特殊,要按照下标来进行数据的获取
+            actors=[info]     
+            #要将第一个也搞进去
+            for x in range(index+1,len(infos)):   
+            #index是主演中第一行的位置,那么我们就是应该从第二行开始进行遍历，
+            #上面的第一行已经包括进去了
+                actor=infos[x].strip()    
+                #去除两边的空格
+                if actor.startswith("◎标　　签"):
+                    break
+                actors.append(actor)  
+                #把处理第一个全搞进去
+            movie['actors']=actors
+        elif info.startswith("◎简　　介"):
+            info = parse_info(info, "◎简　　介")     
+            #这个简介也是和上面演员的一样的
+            movie["director"] = info
+            for x in range(index+1,len(infos)):
+                profile=infos[x].strip()
+
+                if profile.startswith("【下载地址】"):
+                    break
+            movie["profile"]=profile
+    download_url=html.xpath("//td[@bgcolor='#fdfddf']/a/@href")
+    movie["download_url"]=download_url
+    return movie
+
+if __name__ == '__main__':
+    spider()
+
+```
+
+
+
+### BeautifulSoup4 ###
+
+和lxml一样，BeautifulSoup也是一个html和xml的解析器，主要功能也是如何提取其中的数据
+
+lxml只是会局部遍历，而BeautifulSoup是基于HTML DOM(Document Object Model)的，会载入整个文档，解析整个DOM树，因此时间和内存开销都会大很多，所以性能要比lxml低
+
+BS用来解析HTML比较简单，API非常人性化，支持CSS选择器，python标准库中的HTML解析器，也支持lxml的XML解析器。
+
+但是BeautifulSoup的底层还是lxml,就像python的底层还是C,所以解析还是要依照第三方的解析器
+
+| 解析器          | 使用方法                                                     | 优势                                                      | 劣势                          |
+| --------------- | ------------------------------------------------------------ | --------------------------------------------------------- | ----------------------------- |
+| python标准库    | BeautifulSoup(markup，“html.parser”)                         | python内置标准库，执行速度快，容错能力强                  | python3.3之前的版本效果比较差 |
+| lxml HTML解析器 | BeautifulSoup(markup,“lxml”)                                 | 速度快，容错能力强                                        | 需要安装C语言库               |
+| lxml XML解析器  | BeautifulSoup(markup,[“lxml”，“lxml”])   BeautifulSoup(markup，“xml) | 速度快，唯一支持XML解析器                                 | 需要安装C语言库               |
+| html5lib        | BeautifulSoup(markup，”html5lib“)                            | 最好的容错性，以浏览器的方式解析文本，生成HTML5格式的文档 | 速度慢，不依赖外部扩展        |
+
+如果是比较奇葩的网页，建议就用html5lib来进行解析网页，防止报错，他是会自动修复错误存在的。
+
+简单使用：
+
+```python
+from bs4 import BeautifulSoup
+html="""
+
+		xxxxxx #HTML代码的字符串
+
+	"""
+
+bs=BeautifulSoup(html,"lxml")		#将其变成html模式,补上缺失的成分
+
+print(bs.prettify())				#以比较美观的方式打印出来
+
+```
+
+
+
+#### 1.四个常用对象：
+
+BeautifulSoup将复杂的HTML文档换成一个复杂的树形节点,每个节点都是Python对象,所有对象都可以归结为4种:
+
+1. Tag：Tag就是HTML的一个个标签
+2. NavigatebleString
+3. BeautifulSoup
+4. Comme
+
+
+
+#### 2.find&find_all
+
+find：
+
+1. 只能提取第一个的标签,只是找到一个就返回了
+
+find_all：
+
+0. 可以提取所有的标签,以列表的形式返回多个元素
+1. 在提取标签的时候,第一个参数就是标签的名字。然后如果在提取标签的时候想要使用属性进行过滤,那么可以在这个方法中通过关键字参数的形式,将属性的名字以及对应的值传进去。或者是使用’attrs’属性,将所有的属性以及对应的值放在一个字典中传给’attrs’属性
+2. 有些时候,在提取标签的时候,不想提取那么多,那么可以使用’limit’ 限制提取多少个
+
+
+
+使用find和find_all的过滤条件：
+
+1. 关键字参数：将属性的名字作为关键字的名字，以及属性的值作为关键字参数的值进行过滤。
+2. attrs参数：将属性条件放到一个字典中，传给attrs参数
+
+
+
+获取标签的属性：
+
+1. 通过下标的方式：
+
+   ```python
+   href = a['href']
+   ```
+
+   
+
+2. 通过`attrs`属性获取：
+
+   ```python
+   href = a.attrs['href']
+   ```
+
+   
+
+
+
+#### 3.string，strings，stripped_strings，get_test
+
+string：
+
+获取某个标签下的非标签字符串,只是一个,以普通字符串的形式返回
+
+strings：
+
+获取某个标签下的所有子孙非标签字符串，返回生成器,可以加上list变成列表形式
+
+stripped_strings：
+
+获取某个标签下的所有子孙标签的字符串并且去掉空格,返回生成器,方法上同
+
+get_text：
+
+获取某个标签下的所有子孙非标签字符串,但是不是以列表返回,以普通字符串返回
+
+
+
+#### 4.使用BeautifulSoup实现以下需求
+
+1. 获取所有的tr标签
+2. 获取2个tr标签
+3. 获取所有class等于even的tr标签
+4. 将所有id等于test。class也等于test的a标签提取出来
+5. 获取所有a标签的href属性
+6. 获取所有的职位信息(纯文本)
+
+代码实现：
+
+```python
+from bs4 import BeautifulSoup
+
+html="""
+xxxxxx
+"""
+soup=BeautifulSoup(html,"lxml")
+
+
+#1.获取所有的tr标签
+trs=soup.find_all('tr')
+for tr in trs:
+    print(tr)
+    print(type(tr))  
+    #这是一个Tag类型,但是BeautifulSoup里面的repr方法将Tag以字符串的形式打印出来
+
+
+#2.获取2个tr标签
+trs=soup.find_all('tr',limit=2)  
+#limit最多获取两个元素,返回列表,最后加上[1]才是返回第二个元素
+
+
+#3.获取所有class等于even的tr标签
+
+trs=soup.find_all('tr',class_='even')  #class是python的关键字,所以bs4当中加上下划线加以区分
+for tr in trs:
+    print(tr)
+
+trs=soup.find_all('tr',attrs={'class':"even"})  #可以用attrs里面的信息作为参数
+for tr in trs:
+    print(tr)
+
+#4.将所有id等于test,class也等于test的a标签提取出来
+aList=soup.find_all('a',id='test',class_='test')   #有多少个特点也可以一直上去
+for a in aList:
+    print(a)
+
+aList=soup.find_all('a',attrs={"id":"test","class":"test"})   #有多少个特点也可以一直上去
+for a in aList:
+    print(a)
+
+
+#5.获取所有a标签的href属性
+aList=soup.find_all('a')    #找到所有的a标签
+for a in aList:
+    # 1.通过下标的操作
+    href=a['href']     		#这种方式比较简单
+    print(href)
+    #2.通过attrs属性
+    href=a.attrs['href']    #获取a标签下的href属性
+    print(href)
+
+#6.获取所有的职位信息(纯文本)
+trs=soup.find_all('tr')[1:]    #职位信息都在tr标签以内,第一个不是,所以就是要到一以后的就行了
+infos_=[]
+for tr in trs:
+    info={}
+    #方法一
+    tds=tr.find_all("td")      #找到tr标签下所有的td标签
+    title=tds[0]               #title元素都是藏在其中的
+    print(title.string)        #就可以将其中的字符串提取出来了
+    title=tds[0].string        #tds中的第一个元素就是标题
+    category=tds[1].string     #tds中的第二个元素就是分类
+    nums=tds[2].string         #tds中的第三个元素就是个数
+    city=tds[3].string         #tds中的第四个元素就是城市
+    pubtime=tds[4].string      #tds中的第五个元素就是发布时间
+    info['title']=title
+    info['category']=category
+    info['nums']=nums
+    info['city']=city
+    info['pubtime']=pubtime
+    infos_.append(info)
+
+    #方法二
+    #infos=tr.strings             
+    #可以将其中的纯文本(非标签)给全都爬取下来,这样的话是拿到一个生成器,一个对象
+    #for info in infos:
+    #    print(info)                  #就可以打印出来了
+    #infos = list(tr.string)
+    infos=list(tr.stripped_strings)   #可以将其中的字符串中的空格去掉
+    info['title']=infos[0]
+    info['category']=infos[1]
+    info['nums']=infos[2]
+    info['city']=infos[3]
+    info['pubtime']=infos[4]
+    infos_.append(info)               #更加简洁简单
+
+```
+
+
+
+#### 5.select方法
+
+有时候选择css选择器会可以更加的方便，使用select方法可以方便的找出元素。但有时候使用`css`选择器的方式可以更加的方便。使用`css`选择器的语法，应该使用`select`方法。以下列出的集中常用的`css`选择器方法：
+
+1. 通过标签名查找：soup.select(‘a’) #寻找a标签
+
+   ```python
+   print(soup.select('a'))
+   ```
+
+   
+
+2. 通过类名查找：通过类名就是要加上一个.。
+
+   比如要查找class=‘sister’
+
+   soup.select(’.sister’)
+
+   ```python
+   print(soup.select('.sister'))
+   ```
+
+   
+
+3. 通过id查找：通过id查找就是要加上一个#。
+
+   比如要查找id=‘link’
+
+   soup.select(’#link’)
+
+   ```python
+   print(soup.select('#link1'))
+   ```
+
+   
+
+4. 组合直线：soup.select(“p #link1”) #这里会找到p中所有的含有link1属性的id标签
+
+   ```python
+   print(soup.select("p #link1"))
+   ```
+
+   soup.select(“head>titile”)#这里就是会将其中的head下的直接子元素获取到，而不会获取到孙元素
+
+   ```python
+   print(soup.select("head > title"))
+   ```
+
+   
+
+5. 通过属性查找：查找时还可以加入属性元素，属性需要用中括号括起来。
+
+   soup.select(‘a[href=“http://www.baidu.com”]’)
+
+   ```python
+   print(soup.select('a[href="http://example.com/elsie"]'))
+   ```
+
+   
+
+6. 获取内容：以上的select方法返回的结果都是列表的形式，可以遍历形式输出，然后用get_text()方法来获取它的内容。
+
+   ```python
+   soup = BeautifulSoup(html.'lxml')
+   print type(soup.select('title'))
+   print soup.select('title')[0].get_text()
+   
+   for title in soup.select('title'):
+   	print title.get_text()
+   ```
+
+7. 应用示例代码 ①：
+
+   ```html
+   <!DOCTYPE html>
+   <html>
+   <head>
+       <title></title>
+       <style type="text/css">
+           .line1{
+               background-color: pink;
+           }
+           #line2{
+               background-color: rebeccapurple;
+           }
+           .box p{ /*会将全部的子孙元素选取*/
+               background-color: azure;
+           }
+           .box > p{ /*这里是将其中的子元素给搞了,孙元素没有被搞*/
+               background-color: aqua;
+           }
+           input[name='username']
+           {
+               background-color: coral;
+           }
+   
+       </style>
+   </head>
+   <body>
+   <div class="box">
+       <div>
+           <p>the zero data</p>  /*这是孙元素*/
+       </div>
+       <p class="line1">the first data，class可以出现无数次</p>
+       <p class="line1">the second data，而class就是要用.</p>
+       <p id="line2">the third data，一个网页的id不能一样，这个id就是要用#</p>
+       /*这是直接的子元素*/
+   </div>
+   <p>
+           the fourth data
+   </p>
+   <from>
+       <input type="text" name="username">
+       <input type="text" name="password">
+   </from>
+   </body>
+   </html>
+   应用示例代码 ②：
+   ```
+
+   ```html
+   <!DOCTYPE html>
+   <html lang="en">
+   <head>
+       <meta charset="UTF-8">
+       <title>Title</title>
+       <!--第一种情况-->
+   <!--    <style type="text/css">-->
+   <!--        #line3{-->
+   <!--            background-color : pink;-->
+   <!--        }-->
+   <!--    </style>-->
+   
+       <!--第2种情况-->
+   <!--    <style type="text/css">-->
+   <!--        .box{-->
+   <!--            background-color : pink;-->
+   <!--        }-->
+   <!--    </style>-->
+   
+        <!--第3种情况-->
+   <!--    <style type="text/css">-->
+   <!--        p{-->
+   <!--            background-color : pink;-->
+   <!--        }-->
+   <!--    </style>-->
+   
+            <!--第4种情况-->
+   <!--    <style type="text/css">-->
+   <!--        .line1{-->
+   <!--            background-color : pink;-->
+   <!--        }-->
+   <!--    </style>-->
+   
+           <!--第5种情况-->
+   <!--    <style type="text/css">-->
+   <!--        .box p{-->
+   <!--            background-color : pink;-->
+   <!--        }-->
+   <!--    </style>-->
+   
+               <!--第6种情况-->
+       <style type="text/css">
+           .box > p{
+               background-color : pink;
+           }
+       </style>
+   </head>
+   <body>
+       <div class="box">
+           <div>
+               <p>第零行数据</p>
+           </div>
+           <p class="line1">第一行数据</p>
+           <p class="line1">第二行数据</p>
+           <p id="line3">第三行数据</p>
+       </div>
+       <p>第四行数据</p>
+       <form >
+           <input type="text" name="username">
+           <input type="text" name="password">
+       </form>
+   </body>
+   </html>
+   ```
+
+
+
+#### 6.CSS选择器
+
+1. 根据标签的名字选择，示例代码如下：
+
+   ```html
+   p{
+               background-color : pink;
+     }
+   ```
+
+   
+
+2. 根据类名选择，那么要在类的前面假一个点。示例代码如下：
+
+   ```html
+   .line1{
+           background-color : pink;
+          }
+   ```
+
+3. 根据id名字选择，那么要在id的前面加一个#号。
+
+4. 查找子孙元素，那么要在子孙元素中间有一个空格。
+
+5. 查找直接子元素。那么要在父子元素中间有一个 ’>’ 。
+
+6. 根据属性的名字进行查找，那么应该险些标签的名i在，然后再在中括号中写属性的值。
+
+7. 根据类名或id进行查找时，如果还要根据标签名进行过滤。那么可以在类名前或在id的前面加上标签的名字。
 
