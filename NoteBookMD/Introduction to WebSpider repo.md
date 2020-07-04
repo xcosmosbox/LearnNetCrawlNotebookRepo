@@ -894,10 +894,10 @@ print(bs.prettify())				#以比较美观的方式打印出来
 
 BeautifulSoup将复杂的HTML文档换成一个复杂的树形节点,每个节点都是Python对象,所有对象都可以归结为4种:
 
-1. Tag：Tag就是HTML的一个个标签
-2. NavigatebleString
-3. BeautifulSoup
-4. Comme
+1. Tag：BeautifulSoup中所有的标签都是Tag类型，并且BeautifulSoup的对象其实本质上也是一个Tag类型。所以其实一些方法比如find、find_all并不是BeautifulSoup的，而是Tag
+2. NavigableString：继承自python中的str，用起来就跟python的str是一样的。
+3. BeautifulSoup：继承自Tag。用来生成BeautifulSoup树的。对于一些查找方法，比如find、select这些，其实还是Tag的。
+4. Comment：这个就是继承自NavigableString。
 
 
 
@@ -1281,4 +1281,10 @@ for tr in trs:
 6. 根据属性的名字进行查找，那么应该险些标签的名i在，然后再在中括号中写属性的值。
 
 7. 根据类名或id进行查找时，如果还要根据标签名进行过滤。那么可以在类名前或在id的前面加上标签的名字。
+
+8. BeautifulSoup中使用css选择器：在`BeautifulSoup`中，要使用css选择器，那么应该使用`soup.select()`方法。应该传递一个css选择器的字符串给select方法。
+
+9. **contents和children：**
+
+   返回某个标签下的直接子元素，其中也包括字符串。它们两的区别是：contents返回来的是一个列表，children返回的是一个迭代器。
 
