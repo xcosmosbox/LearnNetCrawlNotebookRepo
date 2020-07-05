@@ -1836,7 +1836,7 @@ print(ret.group())
        3. `group(1)`：返回的是第一个子组，可以传入多个。
 
           ```python
-            #分组
+          #分组
           text="apple's price $99,orange's price is $10"
           ret=re.search('.*(\$\d+).*(\$\d+)',text)
           print(ret.group())
@@ -1864,7 +1864,7 @@ print(ret.group())
         1. 简单示例：
 
            ```python
-           #sub方法
+            #sub方法
            text = "apple's price $99,orange's price is $10"
            ret = re.sub('\$\d+','0',text,1) #写了1，所以只替换一个
            print(ret)
@@ -1877,7 +1877,7 @@ print(ret.group())
         2. 利用sub函数删除网页文件中的标签，只留下中文信息：
 
            ```python
-           html = """ 网页文件中的所有内容 """
+            html = """ 网页文件中的所有内容 """
            ret = re.sub(<.+?>,"",html) #为了避免我们需要的中文信息被删除，所有需要加一个`?`，形成非贪婪模式
            print(set)
            ```
@@ -2004,3 +2004,161 @@ if __name__ == '__main__':
 
 注意：多个数据之间需要使用都好分开，json本质上就是字符串。
 
+
+
+#### 字典和列表转JSON：
+
+因为`json`在`dump`的时候，只能存放`ASCII`的字符，因此会将中文进行转义，这时候我们可以使用`ensure_ascii=False`关闭这个特性。
+
+```python
+'''方法二：利用python的json库中自带的dump方法将对象转换为字符串的同时一并输出到json文件中'''
+with open('person.json','w',encoding='utf-8') as fp: #之所以要加’encoding='utf-8'‘是为了配合下面Unicode码关闭后，如果不指定解码形式，中文会出现乱码
+    json.dump(persons,fp,ensure_ascii=False) #之所以要加’ensure_ascii=False‘，是为了在输出的json文件能正常输出正文，如果不加，中文会以Unicode码的形式输出。
+```
+
+在python中，只有基本数据类型才能转换成`json`格式的字符串，也即：`int`、`float`、`str`、`list`、`dict`、`tuple`不然会报错：
+
+```python
+class Person(object):
+    country = 'China'
+
+a = {
+    'person':Person()
+}
+json.dumps(a)
+
+>>> 报错内容：
+in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type Person is not JSON serializable
+```
+
+
+
+#### 将json数据直接`dump`到文件中：
+
+`json`模块中除了`dumps`函数，还有一个`dump`函数，这个函数可以传入一个文件指针，直接将字符串`dump`到文件中。示例代码如下：
+
+```python
+'''方法二：利用python的json库中自带的dump方法将对象转换为字符串的同时一并输出到json文件中'''
+with open('person.json','w',encoding='utf-8') as fp: #之所以要加’encoding='utf-8'‘是为了配合下面Unicode码关闭后，如果不指定解码形式，中文会出现乱码
+    json.dump(persons,fp,ensure_ascii=False) #之所以要加’ensure_ascii=False‘，是为了在输出的json文件能正常输出正文，如果不加，中文会以Unicode码的形式输出。
+```
+
+
+
+#### 将json字符串load成python对象：
+
+```python
+#将json字符串load成python对象
+json_str = '[{"username": "张三", "age": 18, "country": "China"}, {"username": "李四", "age": 18, "country": "China"}]'
+persons = json.loads(json_str)
+print(type(persons))
+for person in persons:
+    print(person)
+```
+
+
+
+#### 直接从文件中读取json：
+
+```python
+#直接从json文件中load成python对象
+with open('person.json','r',encoding='utf-8') as fp: #添加’encoding='utf-8'‘是为了让打印出的数据不出现乱码
+    persons = json.load(fp)
+    print(type(persons))
+    for person in persons:
+        print(person)
+```
+
+
+
+### CSV文件处理
+
+ #### 1.读取csv文件：
+
+   1. 读取csv文件：
+
+      ```python
+      def read_csv_demo1():
+          with open('vgsales.csv','r',encoding='utf-8') as fp:
+              # reader是一个迭代器
+              readers = csv.reader(fp)
+              next(readers) #使用这个语句就能跳过第0行，因为第0行只是列出了分别由那些类型的数据，而不是数据本身
+              for x in readers:
+                  name = x[1] #获得姓名
+                  grade = x[-2] #获得这个人的其它成绩
+                  print({'name':name,'grade':grade})
+      ```
+
+      
+
+   2. 如果想要在获取数据的时候同标题来获取，那么可以使用`DicReader`。示例代码如下：
+
+      ```python
+      '''如果想要在获取数据的时候同标题来获取，那么可以使用`DicReader`。示例代码如下：'''
+      def read_csv_demo2():
+          with open('vgsales.csv', 'r',encoding='utf-8') as fp:
+              #用DictReader创建的reader对象，不会包含标题那行的数据
+              #reader是一个迭代器，遍历这个迭代器，返回的是一个字典。
+              #以下这种方法更安全，因为是跟着标签走，不管那一列的数据如何移动，都不会影响我们读取数据。
+              reader = csv.DictReader(fp)
+              for x in reader:
+                  value = {'Name':x['Name'],'Year':x['Year']}
+                  print(value)
+      ```
+
+      
+
+#### 2.写入数据到csv文件：
+
+   1. 写入数据到csv文件，需要创建一个`writer`对象，主要用到两个方法。一个是`writerow`，这个是写入一行。一个是`writerows`这个是写入多行。示例代码如下：
+
+      ```python
+      '''这个方法使用列表，以及writerow方法和writerows方法分别写入表头和数据'''
+      def write_csv_demo1():
+          #表头
+          headers = ['username','age','height']
+          #表头标签对应的数据
+          values = [
+              ('张三',18,180),
+              ('李四',19,170),
+              ('王五',20,190)
+          ]
+      
+          #需要使用encoding进行编码，不然会乱码
+          #newline的作用是去除空行，因为writer方法是默认写一行然后跳一行再继续写下一行
+          #我们将newline=的值设为空，就不会跳行了
+          with open('writedFile.csv','w',encoding='utf-8',newline='') as fp:
+              writer = csv.writer(fp)
+              writer.writerow(headers)
+              writer.writerows(values)
+      ```
+
+      
+
+   2. 也可以使用字典的方式把数据写入进去。这时候就需要使用`DicWriter`了。示例代码如下：
+
+      ```python
+      '''方法二是使用字典的方式写入'''
+      def write_csv_demo2():
+          # 表头
+          headers = ['username', 'age', 'height']
+          # 用字典的方式写入数据
+          values = [
+              {'username':'张三', 'age':18, 'height':180},
+              {'username': '李四', 'age': 19, 'height': 170},
+              {'username': '王五', 'age': 20, 'height': 190}
+          ]
+          # 需要使用encoding进行编码，不然会乱码
+          # newline的作用是去除空行，因为writer方法是默认写一行然后跳一行再继续写下一行
+          # 我们将newline=的值设为空，就不会跳行了
+          with open('writedFile.csv', 'w', encoding='utf-8', newline='') as fp:
+              writer = csv.DictWriter(fp,headers)
+              #使用方法二时，需要用writeheader写入表头
+              writer.writeheader()
+              writer.writerows(values)
+      
+      ```
+
+      
