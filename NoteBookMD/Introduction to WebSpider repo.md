@@ -1181,8 +1181,11 @@ for tr in trs:
    </from>
    </body>
    </html>
-   应用示例代码 ②：
    ```
+
+   
+
+   应用示例代码 ②：
 
    ```html
    <!DOCTYPE html>
@@ -1287,4 +1290,717 @@ for tr in trs:
 9. **contents和children：**
 
    返回某个标签下的直接子元素，其中也包括字符串。它们两的区别是：contents返回来的是一个列表，children返回的是一个迭代器。
+
+
+
+#### 7.爬取中国天气网的今日天气信息，并将所有城市的天气排序，取温度最低的十个城市，并将它们利用pyecharts库进行数据可视化
+
+```python
+#爬取所有省份所有城市的最低气温，并进行排名，将排名制作成图表并输出到html中，以供可视化打开。
+
+#导包
+import requests
+from bs4 import BeautifulSoup
+from pyecharts.charts import Bar
+
+ALL_DATA = []
+
+#解析页面的方法
+def parse_page(url):
+    #注入头部，伪装为正常访问
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'
+    }
+    #使用requests.get去拉去指定url下的页面，并使用上述的头部去伪装为正常的访问
+    response = requests.get(url,headers=headers)
+    #将拉取到的网页信息以指定的解码形式（避免乱码），存储到text中
+    text = response.content.decode('utf-8')
+    #以下使用BS4库中的方法，构建lxml框架下的html解析器，解析刚刚拉去到的信息
+    #之所以使用html5lib而不是常见的xml，是因为网页中的源代码，由于目的网址程序员的失误，在关于港澳台那一页的天气信息中，<table>标签最后缺少</table>，如果使用xml来提取则会出现许多不需要的错误信息。而html5lib是接近于浏览器的框架，容错率极高，会自动补全那个缺少的</table>以完成程序(但改用此框架后，程序的运行效率会不可避免的下降)。成功后的图片见pic2.png
+    soup = BeautifulSoup(text,'html5lib')
+    #使用解析器中的find方法，筛选出存储了天气信息z中‘class’等于conMidtab的表，并将表中标签为table的信息存储在tables表中(网页信息中的table表头是以省份为表头)。由于使用了BeautifulSoup库，所以整个网页已经被处理为了 树 的形式，并且被提取出来的信息此时不再是 string 类型，而是 Tag 类型
+    conMidtab = soup.find('div',class_ = 'conMidtab')
+    tables = conMidtab.find_all('table')
+    for table in tables:
+        trs = table.find_all('tr')[2:]
+        for index,tr in enumerate(trs):
+            tds = tr.find_all('td')
+            city_td = tds[0]
+            if index == 0:
+                city_td = tds[1] #之所以从第1个开始取，而不是第0个标签开始取，是因为网页中第0个标签是省份，而我们只取所有的城市
+            city = list(city_td.stripped_strings)[0] #此句子将会通过迭代器遍历指定节点下所有的节点，并过滤掉空白的部分，且返回一个生成器,最后转换为一个列表
+            # print(city) 此句可以打印出上述列表中的城市列表，其中包含了华北地区城市的名字，效果见 pic1.png
+            #接下来几句的作用是获得城市温度,之所以知道倒数第二个 ‘td’ 标签是温度，是根据我们手动从网页源代码中观察得到的
+            temp_td = tds[-2]
+            min_temp = list(temp_td.stripped_strings)[0]
+            # print({'city':city,'min_temp':min_temp}) //以列表的形式输出城市和对应城市的温度
+            ALL_DATA.append({'city':city,'min_temp':int(min_temp)}) #最后的min_temp处自所以需要用int强制转换，是因为后面在排序的过程中，默认输出char类型的数据，所以需要强制转换以输出整数数据
+
+
+#执行方法
+def main():
+    #将所有连接制成一个列表
+    urls = {
+        "http://www.weather.com.cn/textFC/hb.shtml",
+        "http://www.weather.com.cn/textFC/db.shtml",
+        "http://www.weather.com.cn/textFC/hd.shtml",
+        "http://www.weather.com.cn/textFC/hz.shtml",
+        "http://www.weather.com.cn/textFC/hn.shtml",
+        "http://www.weather.com.cn/textFC/xb.shtml",
+        "http://www.weather.com.cn/textFC/xn.shtml",
+        "http://www.weather.com.cn/textFC/gat.shtml"
+    }
+    #遍历所有的列表爬取城市和温度
+    for url in urls:
+        parse_page(url)
+
+    #分析数据,根据最低气温进行排序
+    '''
+        方法一：传递一个方法根据指定的字典元素进行排序
+        def sort_key(data):
+            min_temp = data['min_temp']
+            return min_temp
+        ALL_DATA.sort(key=sort_key)
+        缺点：sort_key方法在本程序中不需要复用，所以没有必要实例整个方法，造成性能浪费
+    '''
+    '''方法二：利用lambda表达式使用匿名函数完成同样的功能，代码如下：'''
+    ALL_DATA.sort(key=lambda data: data['min_temp'])
+
+    #只取前十名温度最低的城市
+    data = ALL_DATA[0:10]
+
+    #使用lambda表达式取筛选需要的信息，接着用map映射得到的数据，并转换为list以便绘图
+    cities = list(map(lambda dic:dic['city'],data))
+    temps = list(map(lambda dic:dic['min_temp'],data))
+
+    '''绘图'''
+    #第一步：创建柱状图对象
+    chart = Bar()
+    #第二步：设置柱状图的横纵坐标以及名字
+    chart.add_xaxis(cities)
+    chart.add_yaxis("今日中国最低气温",temps)
+    #第三步：输出柱状图到html文件中
+    chart.render('Temperature.html')
+
+#程序入口
+if __name__ == '__main__':
+    main()
+```
+
+
+
+### 正则表达式 ###
+
+#### 什么是正则表达式？ ####
+
+正则表达式(Regular Expression)是一种文本模式，包括普通字符（例如，a 到 z 之间的字母）和特殊字符（称为"元字符"）。
+
+正则表达式使用单个字符串来描述、匹配一系列匹配某个句法规则的字符串。
+
+#### 正则表达式的常用匹配规则:
+
+1. 匹配单个字符：
+
+```python
+text='hello'
+
+ret=re.match('he',text)  #这里就是在hello中匹配he,但是只能是在第一个匹配,如果是ahello就会报错匹配不到
+
+print(ret.group()) #group可以将其中的值打出来
+
+>>he
+```
+
+以上便可以在`hello`中匹配出`he`
+
+
+
+2. 点(.)匹配任意的字符:
+
+```python
+text="ab"
+
+ret=re.match('.',text)  #match只能匹配到一个字符
+
+print(ret.group())
+
+>>a
+```
+
+但是(.)不能匹配到换行符 text="\n" 就是会报错!
+
+
+
+3. \d匹配到任意的数字:
+
+   ```python
+   text="123"
+   
+   ret=re.match('\d',text)   #只能匹配到一个字符
+   
+   print(ret.group())
+   
+   >>1
+   ```
+
+   
+
+4. \D匹配任意的非数字:
+
+   ```python
+   text="+"
+   
+   ret=re.match('\D',text)   #只能匹配到一个字符
+   
+   print(ret.group())
+   
+   >>a
+   ```
+
+   
+
+5. \s 匹配到是空白字符(\n,\t,\r,空格):
+
+```python
+text=" "
+
+ret=re.match('\s',text)   #只能匹配到一个字符
+
+print(ret.group())
+
+>> 
+```
+
+
+
+6. \w（小写的）匹配到的是a-z和A-Z以及数字和下划线:
+
+   ```python
+   text="_"
+   
+   ret=re.match('\w',text)   #只能匹配到一个字符
+   
+   print(ret.group())
+   
+   >>_
+   ```
+
+   而如果是要匹配到一个其他字符，那么就匹配不到:
+
+   ```python
+   text="+"
+   
+   ret=re.match('\w',text)   #只能匹配到一个字符
+   
+   print(ret.group())
+   
+   >>报错
+   ```
+
+   
+
+7. \W（大写的）匹配的适合\w是相反的:
+
+   ```python
+   text="+"
+   
+   ret=re.match('\W',text)   #只能匹配到一个字符
+   
+   print(ret.group())
+   
+   >>+
+   ```
+
+   
+
+8. [] 组合的方式,只要满足中括号里面的字符就可以匹配到:
+
+   ```python
+   text="0888-88888"
+   
+   ret=re.match('[\d\-]+',text)   #匹配到数字和-，加了个+号之后就是会匹配到所有的符合的，直到不满足条件为止
+   
+   print(ret.group())
+   
+   >>0888-88888
+   ```
+
+   ```python
+   代替
+   
+   \d:[0-9]       [^0-9]防在中括号中‘^’这是非
+   
+   \D:0-9
+   
+   \w:[0-9a-zA-Z_]     [^0-9a-zA-Z_]
+   
+   \W:[0-9a-zA-Z_]
+   
+   ```
+
+   ```python
+   text="0888-88888"
+   
+   ret=re.match('[^0-9]',text)   
+   
+   print(ret.group())
+   
+   >>-
+   ```
+
+   
+
+9. 匹配多个字符:
+
+   1. `*`可以匹配0或是任意多个字符，没有不会报错：
+
+      ```python
+      text="0888-88888"
+      
+      ret=re.match('\d*',text)   
+      
+      print(ret.group())
+      
+      >>0888
+      ```
+
+      
+
+   2. `+`可以匹配1或是任意多个字符，至少要一个，不然报错:
+
+      ```python
+      text="abcd"   #text="+abcd"
+      
+      ret=re.match('\w+',text)   
+      
+      print(ret.group())
+      
+      >>abcd     #>>ab  
+      ```
+
+      
+
+   3. `？`匹配一个或0个（要么没有，要么只有一个）:
+
+      ```python
+      text="abcd"  #text="+abcd"
+      
+      ret=re.match('\w?',text)   
+      
+      print(ret.group())
+      
+      >>a			#>>   匹配到0个
+      ```
+
+      
+
+   4. `{m}`匹配到m个:
+
+      ```python
+      text="abcd"  #text="+abcd"
+      
+      ret=re.match('\w{2}',text)   
+      
+      print(ret.group())
+      
+      >>ab   #只是会匹配到两个
+      ```
+
+      
+
+   5. `{m,n}`匹配m-n个:
+
+      ```python
+      text="abcd"  #text="+abcd"
+      
+      ret=re.match('\w{1,5}',text)    #匹配最多的
+      
+      print(ret.group())
+      
+      >>abcd    #>>报错
+      ```
+
+      
+
+10. 小案例
+
+    1. 验证手机号码
+
+       ```python
+       text="13070970070" 
+       
+       ret=re.match('1[34578]\d{9}',text)    #验证,第一位是1,第二位是34578里面当中的一个后面九个随便
+       
+       print(ret.group())
+       ```
+
+       
+
+    2. 验证邮箱
+
+       ```python
+       text="together13_@11.com" 
+       
+       ret=re.match('\w+@[a-z0-9]+\.[a-z]+',text)    #第一位w匹配到任意的字符,然后就是至少要有一位,所以要是有+号,直到匹配到异常@即不属于w的匹配,然后就是要有@而只有一个@,然后再匹配@后面的一个或者多个字符,然后就是\.匹配任意字符来匹配.最后的com就是用一个[a-z]来匹配，也可能会有+号
+       
+       print(ret.group())
+       ```
+
+       
+
+    3. 验证url
+
+       ```python
+       text="http://www.baidu.com" 
+       
+       ret=re.match('(http|https|ftp)://[^\s]+',text)    #前面用圆括号阔了起来，然后就是http,https,ftp三个里面的选择一个,然后就是//匹配到非空的就行了
+       
+       print(ret.group())
+       ```
+
+       
+
+    4. 验证身份证
+
+       ```python
+       text="12345678909876543x" 
+       
+       ret=re.match('\d{17}[\dxX]',text)    #前面的十七位可以是数字，然后后面一个可能是数字也可能是数字，也可能是x或是X，就用一个中括号括起来
+       
+       print(ret.group())
+       ```
+
+       
+
+11. 本章知识拾遗并小结
+
+    1. $ 表示以。。。结尾
+
+       ```python
+       text="xxx@163.com"
+       
+       ret=re.match('\w+@163.com$',text)   # 以163.com结尾就可以更好验证邮箱
+       
+       print(ret.group())
+       ```
+
+       
+
+    2. ^脱字号:表示以…开始（如果是在中括号当中就是取反的意思）
+
+       ```python
+       text="hello"
+       
+       ret=re.match('^a',text)   # 这个match是自带脱字号的
+       
+       print(ret.group())
+       
+       >>h
+       ```
+
+       ```python
+       text="hello"
+       
+       ret=re.search('o',text)   # 这个search是全局去找
+       
+       print(ret.group())
+       
+       >>o
+       ```
+
+       ```python
+       text="hello"
+       
+       ret=re.match('^o',text)   # 脱字号第一个不是o如果是^h就可以找到h
+       
+       print(ret.group())
+       
+       >>报错
+       
+       ```
+
+       
+
+    3. | 匹配多个字符串或是表达式
+
+       ```python
+       text="https"
+       
+       ret=re.match('http|https|ftp',text)   # 如果组合要用()括起来
+       
+       print(ret.group())
+       ```
+
+       
+
+    4. 贪婪模式与非贪婪模式
+
+       ```python
+       #导入python中包含了正则表达式的包
+       import re
+       
+       #贪婪模式和非贪婪模式
+       text='0123456'
+       ret=re.match('\d+',text) #此时就是贪婪模式，因为这句的意思是至少匹配出一个，但可以匹配处任意多个字符，甚至一直将全部都匹配出来
+       print(ret.group())
+       
+       ret=re.match('\d+?',text) #此时就是非贪婪模式。只要匹配出一个后，就结束了。
+       print(ret.group())
+       
+       #贪婪模式举例2：
+       text='<h1>标题</h1>'
+       ret=re.match('.+',text)
+       print(ret.group())
+       ```
+
+       
+
+    5. 小练习：匹配0-100之间的数字
+
+       ```python
+       #导入python中包含了正则表达式的包
+       import re
+       
+       '''匹配0-100之间的数字
+           可以出现的：0、9、1、10、100、99
+           不能出现的：09、01
+           三种情况：
+               一位数字
+               两位数字
+               三位数字，但只能等于100
+       '''
+       text='32'
+       ret=re.match('0$|[1-9]\d?$|100$',text)
+       print(ret.group())
+       ```
+
+       
+
+    6. 原生字符串和转义字字符
+
+       ```python
+       #转义字符和原生字符串
+       
+       text = 'apple price is $299'
+       ret = re.search('\$\d+',text)
+       print(ret.group())
+       
+       text = '\\n'
+       rett = re.match('\\\\n',text) #利用多次转义消除最开始的转义符号的影响，最终输出字符串’\n‘
+       print(rett.group())
+       rett = re.match(r'\\n',text) #或者是使用python的原生字符串，直接将转义一次后的结果进行查询
+       print(rett.group())
+       ```
+
+       
+
+    7. match：
+
+       1. 从开始的位置进行匹配。如果开始的位置没有匹配到。就直接失败了。示例代码如下：
+
+          ```python
+          text='hello'
+          ret=re.match('he',text)  #这里就是在hello中匹配he,但是只能是在第一个匹配,如果是ahello就会报错匹配不到
+          print(ret.group()) #group可以将其中的值打出来
+          ```
+
+          
+
+       2. 如果第一个字母不是`h`，那么就会失败：
+
+          ```python
+          text='ahello'
+          ret=re.match('he',text)  #这里就是在hello中匹配he,但是只能是在第一个匹配,如果是ahello就会报错匹配不到
+          print(ret.group()) #group可以将其中的值打出来
+          >> 失败
+          ```
+
+          
+
+       3. 如果想要匹配换行的数据，那么久要传入一个`flag=re.DOTALL`，就可以匹配换行符了。示例如下：
+
+          ```python
+          text = "abc\nabc"
+          ret = re.match('abc.*abc',text,re.DOTALL)
+          print(ret.group())
+          ```
+
+          
+
+    8. 分组：在正则表达式中，可以对过滤到的字符串进行分组。分组使用圆括号的方式。
+
+       1. `group`：和`group(0)`是等价的，返回的是整个满足条件的字符串。
+
+       2. `groups`：返回的是里面的子组。索引从1开始。
+
+       3. `group(1)`：返回的是第一个子组，可以传入多个。
+
+          ```python
+            #分组
+          text="apple's price $99,orange's price is $10"
+          ret=re.search('.*(\$\d+).*(\$\d+)',text)
+          print(ret.group())
+          #匹配出整个字符串整个正则就是圆括号一个大的分组ret.group()和ret.group(0)是一样的
+          print(ret.group(1))  #匹配出第一个分组 99
+          print(ret.group(2))  #匹配出第一个分组 10
+          print(ret.groups())  #将所有的子分组输出
+          ```
+
+          
+
+    9. findall函数:找出所有满足条件的，返回的是一个列表
+
+       ```python
+       #find_all方法
+       text = "apple's price $99,orange's price is $10"
+       ret = re.findall('\$\d+',text)
+       print(ret) #结果：['$99', '$10']
+       ```
+
+       
+
+    10. sub函数：
+
+        1. 简单示例：
+
+           ```python
+           #sub方法
+           text = "apple's price $99,orange's price is $10"
+           ret = re.sub('\$\d+','0',text,1) #写了1，所以只替换一个
+           print(ret)
+           ret = re.sub('\$\d+','0',text) #因为没写1，所有会把所有的都替换掉
+           print(ret)
+           ```
+
+           
+
+        2. 利用sub函数删除网页文件中的标签，只留下中文信息：
+
+           ```python
+           html = """ 网页文件中的所有内容 """
+           ret = re.sub(<.+?>,"",html) #为了避免我们需要的中文信息被删除，所有需要加一个`?`，形成非贪婪模式
+           print(set)
+           ```
+
+           
+
+    11. split函数：使用正则表达式来分割字符串
+
+        ```python
+        text = "hello world ni hao"
+        ret=re.split(' ',text)
+        print(ret)  #['hello','world','ni','hao']
+        ```
+
+        
+
+    12. comlie函数：对于一些经常要用到的正则表达式，可以使用`compile`来进行编译，后期再使用的时候可以直接拿过来用，执行效率会更快。而且`compile`还可以指定`flag=re.VERBOSE`，在写正则表达式的时候可以做好注释。示例代码如下：
+
+    ```python
+        #compile函数
+        text="the number is 20.50"
+        r=re.compile('\d+\.?\d*')
+        r=re.compile(r"""
+        	\d+  #小数点前面的数
+        	\.?  #小数点本身
+        	\d*  #小数点后面的数字
+        """,re.VERBOSE)
+        ret=re.search(r,text)   #re.VERBOSE可以写注释
+        print(ret.group())
+    ```
+
+#### 正则表达式练习:
+
+```python
+#正则表达式实例：爬取古诗文网
+import re,requests
+
+#爬取页面信息并进行处理
+def parse_page(url):
+    #注入头部
+    headers = {
+        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'
+    }
+    #拉去指定网址并返回一个对象
+    response = requests.get(url,headers=headers)
+    #将对象中的内容转换为string类型
+    text = response.text
+
+    #获取标题
+    """
+    #从div标签之后开始，之所以采用非贪婪模式，是因为这样才能提取所有的题目，但注意，这里只是从div标签开始之后，其实还没有达到题目的位置
+    #作家的名字存储在 <b></b>标签之间，采用非贪婪模式才能把每一个都提取出来
+    """
+    #获取标题
+    # 由于网页当中的是有\n的，所以就是会有.就匹配不到这个\n就是停止就是会返回一个空
+    # 后面加上一个re.DOTALL 就可以让这个.去匹配所有的字符包括\n   加上?防止非贪婪模式不加的话只能匹配到一个题目
+    titles = re.findall(r'<div\sclass="cont">.*?<b>(.*?)</b>',text,re.DOTALL) #因为前端文件是会换行的，所以需要使用DOTALL来跳过所有的换行
+
+
+    #获取朝代
+    # 这个findall是将括号当中的数字给括起来的给爬取下来的
+    dynasties = re.findall(r'<p\sclass="source">.*?<a.*?>(.*?)</a>',text,re.DOTALL) #因为前端文件是会换行的，所以需要使用DOTALL来跳过所有的换行
+
+    #获取作者
+    # 因为这里是第二个a标签所以就是要将其中的第一个先获取到，然后再将其中的第二个标签给整好
+    authors = re.findall(r'<p\sclass="source">.*?<a.*?>.*?<a.*?>(.*?)</a>',text,re.DOTALL) #因为前端文件是会换行的，所以需要使用DOTALL来跳过所有的换行
+
+    #获取古诗内容
+    # 使用正则表达式就是将其看出字符串而不是网页，就会有什么子元素父元素
+    content_tag = re.findall(r'<div class="contson" .*?>(.*?)</div>',text,re.DOTALL) #因为前端文件是会换行的，所以需要使用DOTALL来跳过所有的换行
+
+    #创建一个列表存储内容
+    contents = []
+    for content in content_tag:
+        #因为拉取到的内容包含了一些如换行和<r></r>之类的标签需要去除，所以使用sub方法
+        x = re.sub(r'<.*?>',"",content)
+        #去除掉x中的换行符，将剩下的纯文本存入contents列表中
+        contents.append(x.strip('\n'))
+
+    #创建古诗列表
+    poems = []
+    for value in zip(titles,dynasties,authors,contents):
+        title,dynasty,author,content = value
+        poem = {
+            'title':title,
+            'dynasty':dynasty,
+            'author':author,
+            'content':content
+        }
+        poems.append(poem)
+
+    #输出所有的古诗
+    for poem in poems:
+        print(poem)
+        print('*'*30)
+
+#执行程序
+def main():
+    #将前十页的故事都爬取下来
+    for x in range(1,11):
+        url = 'https://www.gushiwen.org/default_%s.aspx' % x
+        parse_page(url)
+
+#程序入口
+if __name__ == '__main__':
+    main()
+
+```
+
+------
+
+
+
+## 3.第三章：数据存储 ##
+
+### 1. JSON文件处理
+
+#### JSON支持的数据格式：
+
+1. 对象（字典）：使用花括号
+2. 数组（列表）：使用方括号
+3. 整数、浮点型、布尔类型还要null类型
+4. 字符串类型（字符串必须要用双引号，不能用单引号）
+
+注意：多个数据之间需要使用都好分开，json本质上就是字符串。
 
