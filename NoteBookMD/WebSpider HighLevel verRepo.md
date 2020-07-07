@@ -10,13 +10,13 @@
 
 #### 1.流程图
 
-![14946794-c32c1356bb94c85c](C:\Users\apple\Desktop\14946794-c32c1356bb94c85c.jpg)
+![14946794-c32c1356bb94c85c](https://upload-images.jianshu.io/upload_images/14946794-c32c1356bb94c85c.jpg)
 
 
 
 #### 2.框架原理图
 
-![58f497eb07a387c7ef891805ea07add3](C:\Users\apple\Desktop\58f497eb07a387c7ef891805ea07add3.jpg)
+![58f497eb07a387c7ef891805ea07add3](https://img-blog.csdn.net/20180502174530976)
 
 
 
