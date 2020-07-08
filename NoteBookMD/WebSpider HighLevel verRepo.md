@@ -346,6 +346,144 @@ for n in range(1000):
 
 
 
+### CrawlSpider
+
+有时我们需要爬虫以某种指定的规则爬取url，只要那个url满足我们指定的条件，就将其内容爬取下来。那么这是我们就可以通过`CrawlSpider`来完成了。`CrawlSpider`继承自`Spider`，只不过是在之前的基础上增加了新的功能，可以定义爬虫的url规则，以后scrapy碰到满足条件的url都进行爬取，而不需要我们手动`yield Request`了。
+
+需要使用`LinkExtractor`和`Rule`这两个东西决定爬虫给的具体走向：
+
+1. allow设置规则的方法：要能够限制在我们想要的url上面，不要跟其他url产生相同的正则表达式即可。
+2. 什么情况下使用follow:如果在爬取页面的时候，需要将满足当前条件的url再进行跟进，那么就设置为True。否则设置为False.
+3. 什么情况下该指定callback:如果这个url对应的页面，只是为了获取更多的url，并不需要里面的数据，那么可以不指定callback。如果想要获取url对应的页面中的数据，那么就需要指定一个callback来进行数据的处理，储存等。
+
+#### 创建CrawlSpider
+
+如果想要创建`CrawlSpider`，那么需要通过以下指令：
+
+```shell
+scrapy genspider -t crawl [spiderName] [url]
+```
+
+
+
+#### LinkExtractors链接提取器
+
+使用`LinkExtractors`可以不用程序员自己提取想要的url，然后发送请求。这些工作都可以交给`LinkExtractors`，他会在所有爬的页面这种找到满足规则的url，实现自动爬取。
+
+```python
+class scrapy.linkextractors.LinkExtractor(
+	allow=(),    #允许的url  所有满足这个正则表达式的url都会被提取
+    deny=(),	#禁止的urkl  所有满足这个正则表达式的url都不会被提取
+    allow_domains(),  #允许的域名  只有在这个里面指定的域名的url才会被提取
+    deny_extensions=None, 
+    restrict_xpaths=(),  #严格的xpath和allow共同过滤链接
+    tahs=('a','area'),
+    attrs=('herf'),
+    unique=True,
+    process_value=None
+)
+```
+
+主要参数讲解：
+
+- allow：运行的url。所有满足这个正则表达式的url都会被提取。
+- deny：禁止的url。所有满足这个正则表达式的url都不会被提取。
+- allow_domains：允许的域名。只有在这个里面指定的url才会被提取。
+- deny_domians：禁止的域名。所有在这个里面指定的域名的url都不会被提取。
+- restrict_xpaths：严格的xpath。和allow共同过滤链接。
+
+
+
+#### Rule规则类：
+
+定义爬虫的规则类。以下对这个类做一个简单介绍：
+
+```python
+class scrapy.spiders.Rule(
+link_extractor,
+    callback=None, #满足这个规则的url就应该执行哪个回调函数.因为CrawlSpider使用了parse作为回调函数,因此不要副高parse作为回调函数自己的回调函数
+    cb_kwargs=None, 
+    follow=None,   # 是否需要跟进默认True
+    process_links=None,   # 从link_extractor中获取到连接后会传递给这个函数,用来过滤不需要爬取的连接
+    process_request=None  
+)
+```
+
+主要参数讲解：
+
+- link_extractor：一个`LinkExtractors`对象，用于定义爬取规则。
+- callback：满足这个规则的url，应该要执行那个回调函数。因为`CrawlSpider`使用了`parse`作为回调函数，因此不要覆盖`parse`作用回调函数自己的函数。
+- follow：指定根据该规则从response中提取的链接是否需要跟进。
+- process_links：从`link_extractor`中获取到链接后会传递这个函数，用来过滤不需要爬取的链接。
+
+
+
+### Request和Response对象
+
+1. Request对象
+
+   ```python
+   class Request(object_ref):
+   
+       def __init__(self, url, callback=None, method='GET', headers=None, body=None,
+                    cookies=None, meta=None, encoding='utf-8', priority=0,
+                    dont_filter=False, errback=None, flags=None, cb_kwargs=None):
+   
+           self._encoding = encoding  # this one has to be set first
+           self.method = str(method).upper()
+           self._set_url(url)
+           self._set_body(body)
+           assert isinstance(priority, int), "Request priority not an integer: %r" % priority
+           self.priority = priority
+   
+           if callback is not None and not callable(callback):
+               raise TypeError('callback must be a callable, got %s' % type(callback).__name__)
+           if errback is not None and not callable(errback):
+               raise TypeError('errback must be a callable, got %s' % type(errback).__name__)
+           self.callback = callback
+           self.errback = errback
+   
+           self.cookies = cookies or {}
+           self.headers = Headers(headers or {}, encoding=encoding)
+           self.dont_filter = dont_filter
+   
+           self._meta = dict(meta) if meta else None
+           self._cb_kwargs = dict(cb_kwargs) if cb_kwargs else None
+           self.flags = [] if flags is None else list(flags)
+   
+   
+   ```
+
+   Request对象在我们写爬虫，爬取一页的数据需要重新发送一个请求的时候调用。这个类需要传递一些参数，其中比较常用的参数有：
+
+   1. `url`:这个request对象发送请求的url。
+   2. `callback`:在下载器下载完相应的数据后执行的回调函数。
+   3. `method`:请求的方法。默认为GET方法，可以设置为其他方法。
+   4. `headers`:请求头，对于一些固定的设置，放在settings.py中指定就可以了。对于那些非固定的，可以在发送请求的时候指定
+   5. `meta`:比较常用。用于在不同的请求之间传递数据用的。
+   6. `encoding`:编码，默认的为utf-8,使用默认的就可以了
+   7. `dont_filter`:表示不由调度器过滤，在执行多次重复的请求的时候用得比较多。比如验证码。
+   8. `errback`:在发生错误的时候执行的函数
+
+   
+
+2. Response对象
+
+   Response对象一般是有scrapy给你自动构建的。因此开发者不需要关心如何创建response对象，而且如何使用他。response对象有很多属性，可以用来提取数据的。主要有以下属性：
+
+   1. `meta`：从其他请求传过来的`meta`属性，可以用来保持多个请求之间的数据连接。
+   2. `encoding`：返回当前字符串编码和解码的格式
+   3. `text`:将返回的数据作为`unicode`字符串返回
+   4. `body`：将返回来的数据作为`bytes`字符串返回
+   5. `xpath`：xpath选择器
+   6. `css`：css选择器
+
+   发送POST请求：
+
+   如果需要post请求的话，就需要使用`Request`的子类`FormRequest`来实现，如果想要在爬虫一开始的时候就发送给`POST`请求的话，那么需要在爬虫类中重写`start_requests(self)`方法，并且不再调用`start_urls`里的`url`.
+
+
+
 
 
 
