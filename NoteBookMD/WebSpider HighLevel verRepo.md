@@ -484,17 +484,70 @@ link_extractor,
 
 
 
+### 下载文件和图片
+
+scrapy为下载item中包含的文件（比如爬取到网页时，还想保存对应的图片），提供了一个可重用的`item pipelines`。这与`pipeline`有些共同的方法和结构，我们称之为`media pipeline`。一般使用`Files Pipeline`或是`Images Pipeline`
+
+#### 为什么选择使用`scrapy`内置的下载文件的方法
+
+1. 避免重新下载最近已经下载过的文件
+2. 可以方便指定下载文件的存储路径
+3. 可以将下载的图片转换成通用的格式，比如png或是jpg
+4. 可以方便的生成缩量图
+5. 可以方便的检测图片的宽和高，确保他们满足最小限制
+6. 异步下载，效率非常高
+
+#### 下载文件的`Files Pipeline`
+
+当使用`Files Pipeline`下载文件的话，按照一下步骤来完成：
+
+1. 定义好一个Item，然后再这个`item`中定义两个属性，分别是`file_urls`以及`files`。`file_urls`是用来存储需要下载的文件的url链接，需要给一个列表。
+2. 当文件下载完成后，会把文件下载的相关信息存储到`item`的`files`属性中。比如下载路径，下载的url和文件的效验码等
+3. 再配置文件`settings.py`中配置`FILES_STORE`，这个配置是用来设置文件下载下来的路径
+4. 启动`pipeline`:在`ITEM_PIPELINES`中设置`scrapy.pipelines.files.FilesPipeline:1`
+
+#### 下载图片的`Image Pipeline`
+
+当使用`Image Pipeline`下载文件的时候，按照以下步骤完成：
+
+1. 定义好一个`Item`，然后再这个`item`中定义两个属性，分别为`image_urls`以及`images`。`images_urls`是用来储存需要下载的图片的url链接，需要给一个列表。
+2. 当文件下载完成后，会把文件下载的相关信息存储到`item`的`images`属性中。比如下载路径、下载的url和图片的校验码等
+3. 再配置文件`settings.py`中配置`IMAGES_STORE`,这个配置是用来设置图片下载下来的路径
+4. 启动`pipeline`：在`ITEM_PIPELINES`中设置`scrapy.pipelines.images.ImagesPipeline:1`
 
 
 
+### 下载器中间件
+
+#### **Downloader Middlewares:**
+
+下载器中间件是引擎和下载器之间通信的中间将。在这个中间件中。我们可以设置代理，更换请求头等来达到反发爬虫的目的。要写中间器，可以在下载器中实现两个方法。一个是process_request(self,request,spider),这个方法是在请求发送之前会执行的，还有一个是process_response(self,request,reponse,spider),这个方法是数据下载到引擎之前执行。
+
+#### **process_request(self,request,spider):**
+
+这个方法是下载器在发送请求之前会执行的。一般可以在这个里面设置一些随机代理ip
+
+1. 参数
+   - request：发送请求request对象
+   - spider：发送请求的spider对象
+2. 返回值
+   - 返回None：如果返回None，Scrapy将继续处理该request，执行其他中间件中的相应方法，知道合适的下载器处理函数被调用。
+   - 返回Response对象：Scrapy将不会调用任何其他的process_request方法，将直接返回这个response对象。已经激活的中间件process_reponse()方法则会在每个response返回时被调用。
+   - 返回Request对象：不再使用之前的request对象去下载数据，而是使用现在的request对象返回数据
+   - 如果这个方法抛出异常，则会调用process_exception方法。
 
 
 
+#### process_response(self,request,spider):
 
-
-
-
-
+1. 参数：
+   - request：request对象
+   - response: response对象
+   - spider：spider对象
+2. 返回值：
+   - 返回Response对象：会将这个新的response对象传给其他中间件，最终传给爬虫
+   - 返回Request对象：下载器链被切断，返回的request会重新被下载器调度下载
+   - 如果这个方法抛出异常，则会调用request的errback方法，如果没有指定这个方法,就会抛出一个异常
 
 
 
