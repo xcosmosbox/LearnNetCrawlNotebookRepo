@@ -553,3 +553,274 @@ scrapy为下载item中包含的文件（比如爬取到网页时，还想保存�
 
 
 
+## 分布式爬虫
+
+scrapy 是一个框架，但是本身就不支持分布式的，就是要加上scrapy-redis才能实现分布式
+
+
+
+Advantage：
+
+1. 可以充分利用多台机器的带宽
+2. 可以充分利用多台机器的ip地址
+3. 多台机器做，爬取效率高。
+
+Problem：
+
+1. 分布式爬虫是好多台机器再同时运行，如何保证不同的机器爬取亚眠的时候不会出现重复爬取的问题
+2. 同样，分布式爬虫在不同的机器运行,在把数据爬完后如何保存在同一个地方.
+
+
+
+### Redis
+
+#### 1.启动redis
+
+```linux
+				sudo service redis-server start
+```
+
+#### 2.连接上redis-server
+
+```
+				redus-cli -h [ip] -p [端口]
+```
+
+#### 3.添加
+
+```
+				set key value
+
+				eg:set username xiaotou
+```
+
+将字符串值value关联到key。如果key已经持有其他值，set命令就复写旧值，无视其类型。并且默认的时期时间是永久，即永远不会过期。
+
+#### 4.删除
+
+```
+				del key
+
+				eg:del username
+```
+
+#### 5.设置过期时间
+
+```
+				expire key timeout  （秒）
+```
+
+#### 6.列表操作
+
+1. 在列表的左边添加元素:
+
+   ```
+   	lpush key value
+   ```
+
+   将值value插入到列表key的表头中，如果key不存在，一个空列表会被创建并执行lpush操作。当key存在当不是列表类型是，将返回一个错误.
+
+2. 在列表右边添加元素：
+
+   ```
+   	lpush key value
+   ```
+
+   将值value插入到列表key的表尾。如果key不存在，一个空列表会被创建并执行rpush的操作。当key存在当不是列表类型是，返回一个错误。
+
+3. 查看列表中的元素
+
+   ```
+   	lrange key start stop
+   ```
+
+   返回列表key中指定区间内的元素，区间以偏移量start和stop指定，如果要左边的第一个到最后一个lrange key 0-1 0是第一个。-1是最后一个
+
+4. 移除列表中的元素:
+
+   1. 移除并返回列表key的头元素
+
+      ```
+      	lpop key
+      ```
+
+   2. 移除并返回列表的尾元素
+
+      ```
+      	rpop key
+      ```
+
+   3. 移除并返回列表的中的元素
+
+      ```
+      	lrem key count value
+      ```
+
+       将删除key这个列表中，count个值为value
+
+   4. 指定返回第几个元素
+
+      ```
+       lindex key index
+      ```
+
+      将返回key这个列表中索引index这个元素
+
+   5. 获取列表中的元素个数
+
+      ```
+      llen key
+      eg:llen langueage
+      ```
+
+   6. 删除指定元素
+
+      ```
+      lrem key count value
+      eg: lrem languages 0 php
+      ```
+
+      根据参数count的值，移除列表中与参数value相等的元素。count的值可以是一下几种
+
+      count>0:从表头开始向表尾搜索，移除与value相等的元素，数量是count
+
+      count<0:从表尾开始先表头搜索，移除与value相等的元素，数量为count的绝对值
+
+      count=0:移除表中所有与value相等的值
+
+      
+
+#### 7.set集合操作
+
+1. 添加元素
+
+   ```
+   sadd set value1 value2
+   
+   eg: sadd team xiaotuo datuo
+   ```
+
+   
+
+2. 查看元素
+
+   ```
+   smembers set
+   eg: smember set
+   ```
+
+   
+
+3. 移除元素
+
+   ```
+   srem set member...
+   eg : srem team xiaotuo datuo
+   ```
+
+   
+
+4. 查看集合中的元素个数
+
+   ```
+   scard set
+   eg:scard teaml
+   ```
+
+   
+
+5. 获取多个集合的交集
+
+   ```
+   sinter set1 set2
+   eg: sinter team1 team2
+   ```
+
+   
+
+6. 获取多个集合的并集
+
+   ```
+   sunion set1 set2
+   eg:sunion team1 team2
+   ```
+
+   
+
+7. 获取多个集合的差集
+
+   ```
+   sdiff set1 set2
+   eg:sdiff team1 team2
+   ```
+
+   
+
+#### 8.hash操作
+
+redis中的字典
+
+1. 添加新值
+
+   ```
+   hset key field value
+   
+   eg:hset website baidu baidu.com
+   ```
+
+   
+
+2. 获取哈希中的field对应的值
+
+   ```
+   hget key field
+   
+   eg:hget website baidu
+   ```
+
+   
+
+3. 删除field中的某个field
+
+   ```
+   hdel key field
+   eg:hdel website baidu
+   ```
+
+   
+
+4. 获取某个哈希中的所有的field和value
+
+   ```
+   hgetall key
+   eg:hgetall website 
+   ```
+
+   
+
+5. 获取某个哈希中的所有的值
+
+   ```
+   hvals key
+   eg:hvals website
+   ```
+
+   
+
+6. 判断哈希中是否存在某个field
+
+   ```
+   hexists key field
+   eg:hexists website baidu
+   ```
+
+   
+
+7. 获取哈希中总共的键值对
+
+   ```
+   hlen field
+   eg:hlen website
+   ```
+
+   
